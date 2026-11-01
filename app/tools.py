@@ -67,6 +67,34 @@ def search_glossary(query: str) -> str:
     )
 
 
+def retrieve_glossary(question: str) -> str:
+    """質問文に含まれる用語名・別名から、RAG用の参考情報を検索する。"""
+    q = _normalize(question)
+    if not q:
+        return "検索語が空です。"
+
+    hits = [
+        entry
+        for entry in load_glossary()
+        if any(name in q for name in _names(entry) if len(name) > 1)
+    ][:MAX_RESULTS]
+    if not hits:
+        return search_glossary(question)
+
+    return json.dumps(
+        [
+            {
+                "term": entry["term"],
+                "lecture": entry["lecture"],
+                "definition": entry["definition"],
+                "related": entry["related"],
+            }
+            for entry in hits
+        ],
+        ensure_ascii=False,
+    )
+
+
 def get_lecture_summary(lecture: int) -> str:
     """指定した回（1始まりの整数）の講義の要点を返す。
 
