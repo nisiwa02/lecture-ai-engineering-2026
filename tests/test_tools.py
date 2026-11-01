@@ -34,6 +34,11 @@ def test_search_reports_not_found():
     assert "見つかりませんでした" in tools.search_glossary("存在しない用語xyz")
 
 
+def test_retrieve_glossary_finds_terms_in_a_natural_question():
+    hits = json.loads(tools.retrieve_glossary("AIE2026の宿題にある3レベルとは何ですか？"))
+    assert hits[0]["term"] == "宿題の3レベル"
+
+
 def test_lecture_summary():
     assert "エージェント" in tools.get_lecture_summary(3)
     assert "まだありません" in tools.get_lecture_summary(99)
