@@ -36,6 +36,11 @@ from app.config import MODEL, api_error_message, get_api_key
 
 INSTRUCTIONS = """\
 あなたはAIエンジニアリング講座（AIE2026）の学習支援エージェントです。
+- 用語や講座に固有のことを答える前に、必ず search_glossary で用語集を確認する。
+- 回の内容を聞かれたら get_lecture_summary を使う。
+- make_quiz で確認問題を出すときは、問題・4つの選択肢・正解をすべて回答に含める。クイズの正解表示は宿題の解答提示とは別扱いとする。
+- 用語集に見つからないことは、推測で断定せず「用語集にはない」と伝える。
+- 回答の最後に、関係する回（第N回）を示す。
 - 対象は第1〜3回の本講義資料。講義内容に答える前に必ず search_materials を使う。
 - 複数の話題や回を組み合わせる質問では、必要に応じて検索を分けて根拠を集める。
 - 回答は取得した本文が裏付ける範囲に限定し、知識だけで穴埋めしない。
@@ -79,6 +84,9 @@ FULL_CONTEXT_PROMPT = "<資料>\n{materials}\n</資料>\n\n質問: {question}"
 
 # モデルは実行時に渡す（テストではAPIを呼ばない TestModel に差し替えるため）
 agent = Agent(instructions=INSTRUCTIONS)
+agent.tool_plain(tools.search_glossary)
+agent.tool_plain(tools.get_lecture_summary)
+agent.tool_plain(tools.make_quiz)
 agent.tool_plain(tools.search_materials)
 
 # TODO(第3回 演習): tools.py に make_quiz を作り、ここで登録しよう

@@ -34,9 +34,31 @@ def test_search_reports_not_found():
     assert "見つかりませんでした" in tools.search_glossary("存在しない用語xyz")
 
 
+def test_retrieve_glossary_finds_terms_in_a_natural_question():
+    hits = json.loads(tools.retrieve_glossary("AIE2026の宿題にある3レベルとは何ですか？"))
+    assert hits[0]["term"] == "宿題の3レベル"
+
+
 def test_lecture_summary():
     assert "エージェント" in tools.get_lecture_summary(3)
     assert "まだありません" in tools.get_lecture_summary(99)
+
+
+def test_make_quiz_uses_a_term_from_the_requested_lecture():
+    result = json.loads(tools.make_quiz(2))
+    lecture_terms = [term for term in tools.load_glossary() if term["lecture"] == 2]
+
+    assert any(result["question"] == f"「{term['term']}」の意味は？" for term in lecture_terms)
+    matching_term = next(term for term in lecture_terms if result["question"] == f"「{term['term']}」の意味は？")
+    assert result["answer"] == matching_term["definition"]
+    assert len(result["choices"]) == 4
+    assert len(set(result["choices"])) == 4
+    assert result["answer"] in result["choices"]
+    assert set(result["choices"]) <= {term["definition"] for term in lecture_terms}
+
+
+def test_make_quiz_reports_when_lecture_has_no_terms():
+    assert "用語集にありません" in tools.make_quiz(99)
 
 
 def test_default_question_of_lecture1_is_answerable_from_glossary():

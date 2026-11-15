@@ -5,6 +5,7 @@
 """
 
 import json
+import random
 from functools import cache
 from pathlib import Path
 
@@ -69,6 +70,34 @@ def search_glossary(query: str) -> str:
     )
 
 
+def retrieve_glossary(question: str) -> str:
+    """質問文に含まれる用語名・別名から、RAG用の参考情報を検索する。"""
+    q = _normalize(question)
+    if not q:
+        return "検索語が空です。"
+
+    hits = [
+        entry
+        for entry in load_glossary()
+        if any(name in q for name in _names(entry) if len(name) > 1)
+    ][:MAX_RESULTS]
+    if not hits:
+        return search_glossary(question)
+
+    return json.dumps(
+        [
+            {
+                "term": entry["term"],
+                "lecture": entry["lecture"],
+                "definition": entry["definition"],
+                "related": entry["related"],
+            }
+            for entry in hits
+        ],
+        ensure_ascii=False,
+    )
+
+
 def get_lecture_summary(lecture: int) -> str:
     """指定した回（1始まりの整数）の講義の要点を返す。
 
@@ -79,6 +108,33 @@ def get_lecture_summary(lecture: int) -> str:
         available = sorted(p.stem for p in (DATA_DIR / "lectures").glob("*.md"))
         return f"第{lecture}回の要点はまだありません。用意されている回: {', '.join(available)}"
     return path.read_text(encoding="utf-8")
+
+def make_quiz(lecture: int) -> str:
+    """指定した回の用語から、問題・4つの選択肢・正解を含むクイズを作る。
+
+    学習者が「第2回の用語でクイズを出して」のように理解を練習したいときに使う。
+    返された正解も省略せず、問題や選択肢と一緒にユーザーへ伝える。
+    """
+    terms = [entry for entry in load_glossary() if entry["lecture"] == lecture]
+    if not terms:
+        return f"第{lecture}回の用語は用語集にありません。"
+
+    entry = random.choice(terms)
+    definitions = list(dict.fromkeys(term["definition"] for term in terms))
+    distractors = [definition for definition in definitions if definition != entry["definition"]]
+    if len(distractors) < 3:
+        return f"第{lecture}回の用語が4つ未満のため、4択クイズを作れません。"
+
+    choices = [entry["definition"], *random.sample(distractors, 3)]
+    random.shuffle(choices)
+    return json.dumps(
+        {
+            "question": f"「{entry['term']}」の意味は？",
+            "choices": choices,
+            "answer": entry["definition"],
+        },
+        ensure_ascii=False,
+    )
 
 
 def search_materials(query: str) -> str:
